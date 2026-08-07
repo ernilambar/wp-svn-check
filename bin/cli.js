@@ -2,7 +2,7 @@
 
 import ora from 'ora'
 import { parseArgs } from '../src/lib/cli-options.js'
-import { sanitizeTitle, validateSlug } from '../src/lib/slug.js'
+import { normalizeSlug, validateSlug } from '../src/lib/slug.js'
 import { analyze } from '../src/lib/analyzer.js'
 import { computeExitCode } from '../src/lib/exit-code.js'
 import { renderTerminal } from '../src/render/terminal.js'
@@ -20,7 +20,7 @@ async function main () {
     throw error
   }
 
-  const slug = sanitizeTitle(rawSlug)
+  const slug = normalizeSlug(rawSlug)
 
   if (!validateSlug(slug)) {
     throw new Error(`Invalid plugin slug: "${rawSlug}"`)

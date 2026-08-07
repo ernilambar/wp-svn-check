@@ -1,10 +1,5 @@
 const FIELDS = {
-  'Plugin Name': /^\s*[/*#]*\s*Plugin Name:\s*(.+)$/im,
-  Version: /^\s*[/*#]*\s*Version:\s*(.+)$/im,
-  'Requires at least': /^\s*[/*#]*\s*Requires at least:\s*(.+)$/im,
-  'Tested up to': /^\s*[/*#]*\s*Tested up to:\s*(.+)$/im,
-  'Requires PHP': /^\s*[/*#]*\s*Requires PHP:\s*(.+)$/im,
-  Author: /^\s*[/*#]*\s*Author:\s*(.+)$/im
+  Version: /^\s*[/*#]*\s*Version:\s*(.+)$/im
 }
 
 /**

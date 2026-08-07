@@ -1,29 +1,17 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { sanitizeTitle, validateSlug, buildBaseUrl } from '../../src/lib/slug.js'
+import { normalizeSlug, validateSlug, buildBaseUrl } from '../../src/lib/slug.js'
 
-test('sanitizeTitle lowercases and dashes simple input', () => {
-  assert.equal(sanitizeTitle('Hello World'), 'hello-world')
+test('normalizeSlug trims surrounding whitespace', () => {
+  assert.equal(normalizeSlug('  hello-dolly  '), 'hello-dolly')
 })
 
-test('sanitizeTitle collapses repeated separators and trims dashes', () => {
-  assert.equal(sanitizeTitle('  My--Plugin__Name  '), 'my-plugin__name')
+test('normalizeSlug strips a trailing slash', () => {
+  assert.equal(normalizeSlug('hello-dolly/'), 'hello-dolly')
 })
 
-test('sanitizeTitle converts dots to dashes', () => {
-  assert.equal(sanitizeTitle('some.plugin.v2'), 'some-plugin-v2')
-})
-
-test('sanitizeTitle strips accents to ASCII', () => {
-  assert.equal(sanitizeTitle('Café Déjà'), 'cafe-deja')
-})
-
-test('sanitizeTitle strips HTML tags and entities', () => {
-  assert.equal(sanitizeTitle('<b>Bold</b> &amp; Plugin'), 'bold-plugin')
-})
-
-test('sanitizeTitle already-clean slug is a no-op', () => {
-  assert.equal(sanitizeTitle('woocommerce'), 'woocommerce')
+test('normalizeSlug already-clean slug is a no-op', () => {
+  assert.equal(normalizeSlug('woocommerce'), 'woocommerce')
 })
 
 test('validateSlug accepts word chars, dots and dashes', () => {

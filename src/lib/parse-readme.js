@@ -1,6 +1,5 @@
 const FIELDS = {
   stable_tag: /^Stable tag:\s*(.+)$/im,
-  requires_at_least: /^Requires at least:\s*(.+)$/im,
   tested_up_to: /^Tested up to:\s*(.+)$/im,
   requires_php: /^Requires PHP:\s*(.+)$/im
 }

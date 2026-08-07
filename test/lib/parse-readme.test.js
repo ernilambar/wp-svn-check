@@ -5,7 +5,6 @@ import { parseReadme } from '../../src/lib/parse-readme.js'
 test('parseReadme extracts all fields from a readme.txt-style header', () => {
   const content = `=== Hello Dolly ===
 Stable tag: 1.7.2
-Requires at least: 5.5
 Tested up to: 6.6
 Requires PHP: 7.2
 
@@ -14,7 +13,6 @@ Description text here.
 
   assert.deepEqual(parseReadme(content), {
     stable_tag: '1.7.2',
-    requires_at_least: '5.5',
     tested_up_to: '6.6',
     requires_php: '7.2',
     name: 'Hello Dolly'
