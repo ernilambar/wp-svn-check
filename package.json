@@ -1,0 +1,50 @@
+{
+  "name": "wp-svn-check",
+  "version": "0.1.0",
+  "description": "CLI to check a WordPress.org plugin's SVN repo for common issues",
+  "keywords": [
+    "wordpress",
+    "wp",
+    "svn",
+    "plugin",
+    "cli"
+  ],
+  "homepage": "https://github.com/ernilambar/wp-svn-check#readme",
+  "bugs": {
+    "url": "https://github.com/ernilambar/wp-svn-check/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ernilambar/wp-svn-check.git"
+  },
+  "license": "MIT",
+  "author": "Nilambar Sharma",
+  "type": "module",
+  "bin": {
+    "wp-svn-check": "bin/cli.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "lint": "standard",
+    "lint:fix": "standard --fix",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "node-html-parser": "^9.0.1",
+    "ora": "^8.1.0"
+  },
+  "devDependencies": {
+    "standard": "^17.1.0",
+    "undici": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
