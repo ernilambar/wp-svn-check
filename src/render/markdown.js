@@ -20,7 +20,10 @@ function formatMetaList (report) {
     ['Tested up to', meta.tested_up_to]
   ]
 
-  return fields.map(([label, value]) => `- **${label}:** ${value ?? '—'}`).join('\n')
+  return fields
+    .filter(([, value]) => value != null)
+    .map(([label, value]) => `- **${label}:** ${value}`)
+    .join('\n')
 }
 
 function formatSummary (summary) {

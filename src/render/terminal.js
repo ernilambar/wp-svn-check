@@ -15,7 +15,10 @@ function formatMeta (meta) {
     ['Tested up to', meta.tested_up_to]
   ]
 
-  return fields.map(([label, value]) => `${label}: ${value ?? '—'}`).join('  ·  ')
+  return fields
+    .filter(([, value]) => value != null)
+    .map(([label, value]) => `${label}: ${value}`)
+    .join('  ·  ')
 }
 
 function formatSummary (summary) {

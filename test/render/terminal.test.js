@@ -78,7 +78,7 @@ test('renders meta line with stable tag, trunk version, requires php, tested up 
   assert.match(output, /Tested up to: 6\.6/)
 })
 
-test('falls back to "—" for missing meta fields', (t) => {
+test('omits missing meta fields entirely', (t) => {
   const getOutput = captureOutput(t)
   renderTerminal({
     ...HEALTHY_REPORT,
@@ -86,8 +86,10 @@ test('falls back to "—" for missing meta fields', (t) => {
   })
   const output = getOutput()
 
-  assert.match(output, /Stable tag: —/)
-  assert.match(output, /Trunk version: —/)
+  assert.doesNotMatch(output, /Stable tag/)
+  assert.doesNotMatch(output, /Trunk version/)
+  assert.doesNotMatch(output, /Requires PHP/)
+  assert.doesNotMatch(output, /Tested up to/)
 })
 
 test('renders every section label, check label, and detail', (t) => {

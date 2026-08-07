@@ -39,6 +39,27 @@ plugin is broken" from "the run couldn't complete — retry me".
 
 Node.js 22 or later.
 
+## Contributing
+
+```sh
+npm install
+npm run lint:fix   # auto-fix `standard` violations
+npm run lint       # must be zero errors
+npm test           # node --test, no network calls
+```
+
+No test hits the real SVN mirror — HTTP is mocked via undici's `MockAgent`.
+
+### Manual Testing
+
+Before opening a PR, verify the key commands against the real CLI:
+
+```bash
+node bin/cli.js hello-dolly
+node bin/cli.js hello-dolly --format markdown
+node bin/cli.js this-slug-does-not-exist
+```
+
 ## License
 
 MIT © 2026 [Nilambar Sharma](https://nilambar.net/)

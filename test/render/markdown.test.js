@@ -76,14 +76,19 @@ test('renders meta as a bullet list', (t) => {
   assert.match(output, /- \*\*Tested up to:\*\* 6\.6/)
 })
 
-test('falls back to "—" for missing meta fields', (t) => {
+test('omits missing meta fields entirely', (t) => {
   const getOutput = captureOutput(t)
   renderMarkdown({
     ...HEALTHY_REPORT,
     meta: { ...HEALTHY_REPORT.meta, stable_tag: null, trunk_version: null, requires_php: null, tested_up_to: null }
   })
 
-  assert.match(getOutput(), /- \*\*Stable tag:\*\* —/)
+  const output = getOutput()
+
+  assert.doesNotMatch(output, /Stable tag/)
+  assert.doesNotMatch(output, /Trunk version/)
+  assert.doesNotMatch(output, /Requires PHP/)
+  assert.doesNotMatch(output, /Tested up to/)
 })
 
 test('renders each section as a GFM table with Status | Check | Detail columns', (t) => {
