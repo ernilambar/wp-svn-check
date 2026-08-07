@@ -6,8 +6,7 @@ const FIELDS = {
 }
 
 /**
- * Port of SVN_Fetcher::parse_readme() — regex field extraction from
- * readme.txt/.md content.
+ * Regex field extraction from readme.txt/.md content.
  */
 export function parseReadme (content) {
   const data = {}

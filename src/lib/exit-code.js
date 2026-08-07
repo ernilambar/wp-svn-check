@@ -1,6 +1,6 @@
 /**
- * Map a report to the tiered CI exit code (see PLAN.md): 4 unreachable,
- * 3 not_found, 2 has-fail, 1 has-warn, 0 all-pass.
+ * Map a report to the tiered CI exit code: 4 unreachable, 3 not_found,
+ * 2 has-fail, 1 has-warn, 0 all-pass.
  */
 export function computeExitCode (report) {
   if (report.meta.error === 'unreachable') {

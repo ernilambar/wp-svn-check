@@ -3,10 +3,10 @@ const SVN_HOST = 'https://plugins.svn.wordpress.org/'
 const SLUG_PATTERN = /^[\w.-]+$/
 
 /**
- * Port of WordPress's sanitize_title() for the common ASCII-dash case.
- * Accented input is handled via Unicode decomposition rather than
- * WordPress's exact remove_accents() table, so it is close but not
- * byte-for-byte identical.
+ * Slugify a plugin name/title, matching WordPress's sanitize_title() for
+ * the common ASCII-dash case. Accented input is handled via Unicode
+ * decomposition rather than WordPress's exact remove_accents() table, so
+ * it is close but not byte-for-byte identical.
  */
 export function sanitizeTitle (input) {
   let title = String(input)

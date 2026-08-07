@@ -8,8 +8,7 @@ const FIELDS = {
 }
 
 /**
- * Port of SVN_Fetcher::parse_plugin_headers() — regex field extraction from
- * the main plugin PHP file's docblock.
+ * Regex field extraction from the main plugin PHP file's docblock.
  */
 export function parsePluginHeaders (content) {
   const data = {}

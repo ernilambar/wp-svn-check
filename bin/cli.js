@@ -9,7 +9,17 @@ import { renderTerminal } from '../src/render/terminal.js'
 import { renderMarkdown } from '../src/render/markdown.js'
 
 async function main () {
-  const { slug: rawSlug, format } = parseArgs(process.argv.slice(2))
+  let rawSlug, format
+
+  try {
+    ({ slug: rawSlug, format } = parseArgs(process.argv.slice(2)))
+  } catch (error) {
+    if (error.code === 'commander.helpDisplayed' || error.code === 'commander.version') {
+      process.exit(error.exitCode)
+    }
+    throw error
+  }
+
   const slug = sanitizeTitle(rawSlug)
 
   if (!validateSlug(slug)) {

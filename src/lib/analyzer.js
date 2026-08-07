@@ -164,9 +164,10 @@ function addAssetsChecks (builder, items) {
 }
 
 /**
- * Port of SVN_Analyzer::run() — fetches a plugin's SVN repo and builds a
- * Report. See PLAN.md Phase 4 for the resolve-phase not_found/unreachable
- * bail-out this corrects relative to the PHP original.
+ * Fetches a plugin's SVN repo and builds a report. The resolve-phase
+ * not_found/unreachable bail-out below distinguishes a genuinely missing
+ * plugin from a mirror that couldn't be reached, rather than collapsing
+ * both into "not found".
  */
 export async function analyze (slug) {
   const baseUrl = buildBaseUrl(slug)

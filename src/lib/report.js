@@ -5,8 +5,7 @@ function emptySummary () {
 }
 
 /**
- * Port of Report_Builder/Report/Section/Check_Item as plain objects. Fluent
- * builder for assembling a report section by section.
+ * Fluent builder for assembling a report section by section.
  */
 export function createReportBuilder (slug) {
   const report = { slug, meta: {}, summary: emptySummary(), sections: [] }

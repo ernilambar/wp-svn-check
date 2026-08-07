@@ -1,4 +1,10 @@
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { Command, Option } from 'commander'
+
+const packageJson = JSON.parse(
+  readFileSync(fileURLToPath(new URL('../../package.json', import.meta.url)))
+)
 
 /**
  * Parse CLI args (excluding node/script) into { slug, format }. `format` is
@@ -10,8 +16,9 @@ export function parseArgs (argv) {
     .name('wp-svn-check')
     .argument('<slug>', 'WordPress.org plugin slug')
     .addOption(new Option('--format <format>', 'output format').choices(['json', 'markdown']))
+    .version(packageJson.version, '-v, --version', 'output the version number')
     .exitOverride()
-    .configureOutput({ writeOut: () => {}, writeErr: () => {} })
+    .configureOutput({ writeErr: () => {} })
 
   program.parse(argv, { from: 'user' })
 
