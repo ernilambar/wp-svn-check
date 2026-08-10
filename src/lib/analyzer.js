@@ -8,6 +8,18 @@ const README_CANDIDATES = ['readme.txt', 'README.txt', 'readme.md', 'README.md']
 const SKIP_PHP_FILES = ['uninstall.php']
 const BANNER_PATTERN = /^banner-\d+x\d+\.(png|jpg)$/i
 const ICON_PATTERN = /^icon(-\d+x\d+\.(png|jpg)|\.svg)$/i
+const ROOT_ALLOWED_NAMES = ['assets', 'branches', 'tags', 'trunk']
+const ASSETS_ALLOWED_EXTENSIONS = ['jpg', 'png', 'svg', 'gif']
+const ASSETS_ALLOWED_DIRS = ['blueprints']
+
+function baseName (name) {
+  return name.replace(/\/+$/, '')
+}
+
+function extensionOf (name) {
+  const match = /\.([^.]+)$/.exec(name)
+  return match ? match[1].toLowerCase() : ''
+}
 
 /**
  * Try each relative path in order, returning the first HTTP 200. Keeps every
@@ -74,10 +86,24 @@ async function findMainPluginFile (baseUrl, slug, trunkItems) {
 }
 
 /**
+ * Flag any file whose name ends in .zip sitting directly inside a folder —
+ * mirrors checkUnexpectedPluginFiles() in svncheck.php.
+ */
+function addZipFileCheck (builder, label, items) {
+  const zipFiles = items.filter((item) => !item.is_dir && extensionOf(item.name) === 'zip').map((item) => item.name)
+
+  builder.check(
+    label,
+    zipFiles.length ? 'fail' : 'pass',
+    zipFiles.length ? `Unexpected .zip file(s) found: ${zipFiles.join(', ')}` : 'None found'
+  )
+}
+
+/**
  * Add checks for the tags/{stable_tag}/ folder: readme.txt fallback chain,
  * stable-tag-matches-trunk, main PHP file, version-matches-trunk.
  */
-async function addStableTagChecks (builder, baseUrl, tag, pluginFile, trunkStable, trunkVersion) {
+async function addStableTagChecks (builder, baseUrl, tag, pluginFile, trunkStable, trunkVersion, tagItems) {
   const readmeResult = await fetchFirstOk(baseUrl, README_CANDIDATES.map((name) => `tags/${tag}/${name}`))
   const readmeOk = readmeResult.ok
 
@@ -135,20 +161,42 @@ async function addStableTagChecks (builder, baseUrl, tag, pluginFile, trunkStabl
       )
     }
   }
+
+  addZipFileCheck(builder, 'No unexpected .zip files', tagItems)
 }
 
 function addAssetsChecks (builder, items) {
   let bannerFile = null
   let iconFile = null
+  let hasBlueprintsDir = false
+  const unexpectedFiles = []
 
-  for (const { name } of items) {
+  for (const item of items) {
+    const name = baseName(item.name)
+
     if (!bannerFile && BANNER_PATTERN.test(name)) {
       bannerFile = name
     }
     if (!iconFile && ICON_PATTERN.test(name)) {
       iconFile = name
     }
+
+    if (item.is_dir) {
+      if (name === 'blueprints') {
+        hasBlueprintsDir = true
+      } else if (!ASSETS_ALLOWED_DIRS.includes(name)) {
+        unexpectedFiles.push(item.name)
+      }
+    } else if (!ASSETS_ALLOWED_EXTENSIONS.includes(extensionOf(name))) {
+      unexpectedFiles.push(item.name)
+    }
   }
+
+  builder.check(
+    'No unexpected files/directories',
+    unexpectedFiles.length ? 'fail' : 'pass',
+    unexpectedFiles.length ? `Unexpected files/directories found: ${unexpectedFiles.join(', ')}` : 'None found'
+  )
 
   builder.check(
     'Banner image present',
@@ -160,6 +208,21 @@ function addAssetsChecks (builder, items) {
     'Icon image present',
     iconFile ? 'pass' : 'info',
     iconFile ?? 'icon-128x128.(png|jpg) or icon.svg not found — optional'
+  )
+
+  return { hasBlueprintsDir }
+}
+
+async function addBlueprintCheck (builder, baseUrl) {
+  const result = await fetchRaw(baseUrl, 'assets/blueprints/blueprint.json')
+  const found = result.code === 200
+
+  builder.check(
+    'blueprints/blueprint.json present',
+    'info',
+    found
+      ? 'Found — Live Preview is active'
+      : 'Not found — optional but needed to activate Live Preview'
   )
 }
 
@@ -192,8 +255,10 @@ export async function analyze (slug) {
   const { file: pluginFile, content: phpContent } = await findMainPluginFile(baseUrl, slug, trunkDir.items)
   const phpData = phpContent ? parsePluginHeaders(phpContent) : {}
 
-  const tagsResult = await fetchRaw(baseUrl, 'tags/')
-  const tagsExists = tagsResult.code === 200
+  const rootDir = await fetchDirectory(baseUrl, '')
+
+  const tagsDir = await fetchDirectory(baseUrl, 'tags/')
+  const tagsExists = tagsDir.exists
 
   const assetsDir = await fetchDirectory(baseUrl, 'assets/')
   const assetsExists = assetsDir.exists
@@ -217,6 +282,22 @@ export async function analyze (slug) {
     .check('trunk/ exists', trunkExists ? 'pass' : 'fail', trunkExists ? 'Found' : 'Missing')
     .check('tags/ exists', tagsExists ? 'pass' : 'fail', tagsExists ? 'Found' : 'Missing')
     .check('assets/ exists', assetsExists ? 'pass' : 'warn', assetsExists ? 'Found' : 'Missing — optional but recommended')
+
+  const unexpectedRootFiles = rootDir.items.filter((item) => !ROOT_ALLOWED_NAMES.includes(baseName(item.name))).map((item) => item.name)
+
+  builder.check(
+    'No unexpected files/directories',
+    unexpectedRootFiles.length ? 'fail' : 'pass',
+    unexpectedRootFiles.length ? `Unexpected files/directories found: ${unexpectedRootFiles.join(', ')}` : 'None found'
+  )
+
+  const unexpectedTagsFiles = tagsDir.items.filter((item) => !item.is_dir).map((item) => item.name)
+
+  builder.check(
+    'No unexpected files at tags/',
+    unexpectedTagsFiles.length ? 'fail' : 'pass',
+    unexpectedTagsFiles.length ? `Unexpected files found at tags/: ${unexpectedTagsFiles.join(', ')}` : 'None found'
+  )
 
   builder.section('trunk', 'Trunk')
 
@@ -255,11 +336,13 @@ export async function analyze (slug) {
     builder.check('Stable tag matches PHP version', 'warn', 'Cannot compare — one or both values missing')
   }
 
+  addZipFileCheck(builder, 'No unexpected .zip files', trunkDir.items)
+
   if (stableTag) {
     builder.section('stable_tag', `tags/${stableTag}/`)
 
-    const tagResult = await fetchRaw(baseUrl, `tags/${stableTag}/`)
-    const tagExists = tagResult.code === 200
+    const tagDir = await fetchDirectory(baseUrl, `tags/${stableTag}/`)
+    const tagExists = tagDir.exists
 
     builder.check(
       `tags/${stableTag}/ exists`,
@@ -268,12 +351,16 @@ export async function analyze (slug) {
     )
 
     if (tagExists && pluginFile) {
-      await addStableTagChecks(builder, baseUrl, stableTag, pluginFile, stableTag, trunkVersion)
+      await addStableTagChecks(builder, baseUrl, stableTag, pluginFile, stableTag, trunkVersion, tagDir.items)
     }
   }
 
   builder.section('assets', 'Assets')
-  addAssetsChecks(builder, assetsDir.items)
+  const { hasBlueprintsDir } = addAssetsChecks(builder, assetsDir.items)
+
+  if (hasBlueprintsDir) {
+    await addBlueprintCheck(builder, baseUrl)
+  }
 
   return builder.build()
 }
