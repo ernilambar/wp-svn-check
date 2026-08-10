@@ -24,14 +24,17 @@ const PHP_HEADER = `<?php
  */
 `
 
+const ROOT_LISTING = '<a href="../">..</a><a href="assets/">assets/</a><a href="tags/">tags/</a><a href="trunk/">trunk/</a>'
 const TRUNK_LISTING = '<a href="../">..</a><a href="hello-dolly.php">hello-dolly.php</a><a href="readme.txt">readme.txt</a>'
+const TAGS_LISTING = '<a href="../">..</a><a href="1.7.2/">1.7.2/</a>'
 const ASSETS_LISTING = '<a href="../">..</a><a href="banner-772x250.png">banner-772x250.png</a><a href="icon-128x128.png">icon-128x128.png</a>'
 
 const HEALTHY_RESPONSES = {
+  '': [200, ROOT_LISTING],
   'trunk/readme.txt': [200, README_TXT],
   'trunk/': [200, TRUNK_LISTING],
   'trunk/hello-dolly.php': [200, PHP_HEADER],
-  'tags/': [200, ''],
+  'tags/': [200, TAGS_LISTING],
   'assets/': [200, ASSETS_LISTING],
   'tags/1.7.2/': [200, ''],
   'tags/1.7.2/readme.txt': [200, README_TXT],
@@ -75,9 +78,93 @@ test('a healthy plugin passes every check', async (t) => {
   assert.equal(report.meta.plugin_file, 'hello-dolly.php')
   assert.equal(report.meta.stable_tag, '1.7.2')
   assert.equal(report.meta.trunk_version, '1.7.2')
-  assert.deepEqual(report.summary, { pass: 17, warn: 0, fail: 0, info: 0 })
+  assert.deepEqual(report.summary, { pass: 22, warn: 0, fail: 0, info: 0 })
   assert.equal(check(report, 'assets', 'Banner image present').status, 'pass')
   assert.equal(check(report, 'assets', 'Icon image present').status, 'pass')
+})
+
+test('a stray file in the SVN root fails the unexpected-files check', async (t) => {
+  const rootWithStrayFile = `${ROOT_LISTING}<a href="notes.txt">notes.txt</a>`
+  mockResponses(withMockAgent(t), { '': [200, rootWithStrayFile] })
+
+  const report = await analyze(SLUG)
+
+  const rootCheck = check(report, 'root', 'No unexpected files/directories')
+  assert.equal(rootCheck.status, 'fail')
+  assert.match(rootCheck.detail, /notes\.txt/)
+})
+
+test('a loose file directly under tags/ fails the unexpected-files-at-tags check', async (t) => {
+  const tagsWithStrayFile = `${TAGS_LISTING}<a href="notes.txt">notes.txt</a>`
+  mockResponses(withMockAgent(t), { 'tags/': [200, tagsWithStrayFile] })
+
+  const report = await analyze(SLUG)
+
+  const tagsCheck = check(report, 'root', 'No unexpected files at tags/')
+  assert.equal(tagsCheck.status, 'fail')
+  assert.match(tagsCheck.detail, /notes\.txt/)
+})
+
+test('a disallowed file extension in assets/ fails the unexpected-files check', async (t) => {
+  const assetsWithStrayFile = `${ASSETS_LISTING}<a href="notes.txt">notes.txt</a>`
+  mockResponses(withMockAgent(t), { 'assets/': [200, assetsWithStrayFile] })
+
+  const report = await analyze(SLUG)
+
+  const assetsCheck = check(report, 'assets', 'No unexpected files/directories')
+  assert.equal(assetsCheck.status, 'fail')
+  assert.match(assetsCheck.detail, /notes\.txt/)
+})
+
+test('a blueprints/ dir in assets/ is allowed and reports blueprint.json presence', async (t) => {
+  const assetsWithBlueprints = `${ASSETS_LISTING}<a href="blueprints/">blueprints/</a>`
+  mockResponses(withMockAgent(t), {
+    'assets/': [200, assetsWithBlueprints],
+    'assets/blueprints/blueprint.json': [200, '{}']
+  })
+
+  const report = await analyze(SLUG)
+
+  assert.equal(check(report, 'assets', 'No unexpected files/directories').status, 'pass')
+  const blueprintCheck = check(report, 'assets', 'blueprints/blueprint.json present')
+  assert.equal(blueprintCheck.status, 'info')
+  assert.match(blueprintCheck.detail, /Live Preview is active/)
+})
+
+test('a blueprints/ dir without blueprint.json reports it as optional but missing', async (t) => {
+  const assetsWithBlueprints = `${ASSETS_LISTING}<a href="blueprints/">blueprints/</a>`
+  mockResponses(withMockAgent(t), {
+    'assets/': [200, assetsWithBlueprints],
+    'assets/blueprints/blueprint.json': [404, 'Not Found']
+  })
+
+  const report = await analyze(SLUG)
+
+  const blueprintCheck = check(report, 'assets', 'blueprints/blueprint.json present')
+  assert.equal(blueprintCheck.status, 'info')
+  assert.match(blueprintCheck.detail, /Not found/)
+})
+
+test('a .zip file in trunk/ fails the trunk unexpected-zip check', async (t) => {
+  const trunkWithZip = `${TRUNK_LISTING}<a href="hello-dolly.zip">hello-dolly.zip</a>`
+  mockResponses(withMockAgent(t), { 'trunk/': [200, trunkWithZip] })
+
+  const report = await analyze(SLUG)
+
+  const zipCheck = check(report, 'trunk', 'No unexpected .zip files')
+  assert.equal(zipCheck.status, 'fail')
+  assert.match(zipCheck.detail, /hello-dolly\.zip/)
+})
+
+test('a .zip file in the stable tag folder fails its unexpected-zip check', async (t) => {
+  const tagWithZip = '<a href="../">..</a><a href="hello-dolly.zip">hello-dolly.zip</a>'
+  mockResponses(withMockAgent(t), { 'tags/1.7.2/': [200, tagWithZip] })
+
+  const report = await analyze(SLUG)
+
+  const zipCheck = check(report, 'stable_tag', 'No unexpected .zip files')
+  assert.equal(zipCheck.status, 'fail')
+  assert.match(zipCheck.detail, /hello-dolly\.zip/)
 })
 
 test('a nonexistent slug reports not_found, not unreachable', async (t) => {

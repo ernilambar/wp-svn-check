@@ -1,6 +1,6 @@
 {
   "name": "wp-svn-check",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "CLI to check a WordPress.org plugin's SVN repo for common issues",
   "keywords": [
     "wordpress",
