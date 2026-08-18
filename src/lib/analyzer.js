@@ -11,6 +11,7 @@ const ICON_PATTERN = /^icon(-\d+x\d+\.(png|jpg)|\.svg)$/i
 const ROOT_ALLOWED_NAMES = ['assets', 'branches', 'tags', 'trunk']
 const ASSETS_ALLOWED_EXTENSIONS = ['jpg', 'png', 'svg', 'gif']
 const ASSETS_ALLOWED_DIRS = ['blueprints']
+const PLUGIN_API_BASE_URL = 'https://api.wordpress.org/plugins/info/1.0/'
 
 function baseName (name) {
   return name.replace(/\/+$/, '')
@@ -160,6 +161,14 @@ async function addStableTagChecks (builder, baseUrl, tag, pluginFile, trunkStabl
         `${phpVersion} === ${trunkVersion}`
       )
     }
+
+    const phpRequiresPlugins = phpData['Requires Plugins'] ?? null
+
+    builder.check(
+      'Requires Plugins declared',
+      'info',
+      phpRequiresPlugins || 'Not set — optional'
+    )
   }
 
   addZipFileCheck(builder, 'No unexpected .zip files', tagItems)
@@ -226,6 +235,42 @@ async function addBlueprintCheck (builder, baseUrl) {
   )
 }
 
+async function addRequiredPluginsChecks (builder, requiresPlugins) {
+  const slugs = requiresPlugins
+    .split(',')
+    .map((slug) => slug.trim())
+    .filter(Boolean)
+
+  if (!slugs.length) {
+    return
+  }
+
+  for (const slug of slugs) {
+    if (!isSafeSegment(slug)) {
+      builder.check(
+        `Required plugin "${slug}" exists`,
+        'fail',
+        'Invalid plugin slug'
+      )
+      continue
+    }
+
+    const result = await fetchRaw(PLUGIN_API_BASE_URL, slug)
+    const exists = result.code === 200
+    const status = exists ? 'pass' : (result.transportError ? 'warn' : 'fail')
+
+    builder.check(
+      `Required plugin "${slug}" exists`,
+      status,
+      exists
+        ? 'Found in the WordPress.org plugin directory'
+        : (result.transportError
+            ? 'Could not verify — WordPress.org plugin API is unreachable'
+            : 'Not found in the WordPress.org plugin directory')
+    )
+  }
+}
+
 /**
  * Fetches a plugin's SVN repo and builds a report. The resolve-phase
  * not_found/unreachable bail-out below distinguishes a genuinely missing
@@ -266,12 +311,14 @@ export async function analyze (slug) {
   const rawStableTag = readmeData.stable_tag ?? null
   const stableTag = rawStableTag && isSafeSegment(rawStableTag) ? rawStableTag : null
   const trunkVersion = phpData.Version ?? null
+  const requiresPlugins = phpData['Requires Plugins'] ?? null
 
   builder.meta({
     plugin_name: readmeData.name ?? null,
     plugin_file: pluginFile,
     stable_tag: stableTag,
     trunk_version: trunkVersion,
+    requires_plugins: requiresPlugins,
     requires_php: readmeData.requires_php ?? null,
     tested_up_to: readmeData.tested_up_to ?? null,
     svn_url: baseUrl
@@ -336,7 +383,17 @@ export async function analyze (slug) {
     builder.check('Stable tag matches PHP version', 'warn', 'Cannot compare — one or both values missing')
   }
 
+  builder.check(
+    'Requires Plugins declared',
+    'info',
+    requiresPlugins || 'Not set — optional'
+  )
+
   addZipFileCheck(builder, 'No unexpected .zip files', trunkDir.items)
+
+  if (requiresPlugins) {
+    await addRequiredPluginsChecks(builder, requiresPlugins)
+  }
 
   if (stableTag) {
     builder.section('stable_tag', `tags/${stableTag}/`)

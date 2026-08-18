@@ -1,5 +1,6 @@
 const FIELDS = {
-  Version: /^\s*[/*#]*\s*Version:\s*(.+)$/im
+  Version: /^\s*[/*#]*\s*Version:\s*(.+)$/im,
+  'Requires Plugins': /^\s*[/*#]*\s*Requires Plugins:\s*(.+)$/im
 }
 
 /**
