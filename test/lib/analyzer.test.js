@@ -41,7 +41,7 @@ const HEALTHY_RESPONSES = {
   'tags/1.7.2/hello-dolly.php': [200, PHP_HEADER]
 }
 
-function withMockAgent (t) {
+function withMockAgent (t, pools = {}) {
   const originalDispatcher = getGlobalDispatcher()
   const agent = new MockAgent()
   agent.disableNetConnect()
@@ -49,6 +49,7 @@ function withMockAgent (t) {
 
   t.after(() => setGlobalDispatcher(originalDispatcher))
 
+  pools.pluginApi = agent.get('https://api.wordpress.org')
   return agent.get('https://plugins.svn.wordpress.org')
 }
 
@@ -78,7 +79,9 @@ test('a healthy plugin passes every check', async (t) => {
   assert.equal(report.meta.plugin_file, 'hello-dolly.php')
   assert.equal(report.meta.stable_tag, '1.7.2')
   assert.equal(report.meta.trunk_version, '1.7.2')
-  assert.deepEqual(report.summary, { pass: 22, warn: 0, fail: 0, info: 0 })
+  assert.deepEqual(report.summary, { pass: 22, warn: 0, fail: 0, info: 2 })
+  assert.equal(check(report, 'trunk', 'Requires Plugins declared').status, 'info')
+  assert.equal(check(report, 'stable_tag', 'Requires Plugins declared').status, 'info')
   assert.equal(check(report, 'assets', 'Banner image present').status, 'pass')
   assert.equal(check(report, 'assets', 'Icon image present').status, 'pass')
 })
@@ -247,6 +250,45 @@ test('a stable-tag/version mismatch fails the comparison check', async (t) => {
 
   assert.equal(report.meta.trunk_version, '1.7.0')
   assert.equal(check(report, 'trunk', 'Stable tag matches PHP version').status, 'fail')
+})
+
+test('required plugins must exist in the WordPress.org plugin directory', async (t) => {
+  const phpWithDependencies = PHP_HEADER.replace(
+    'Requires PHP: 7.2',
+    'Requires PHP: 7.2\n * Requires Plugins: existing-plugin, missing-plugin'
+  )
+  const pools = {}
+  const pool = withMockAgent(t, pools)
+  mockResponses(pool, { 'trunk/hello-dolly.php': [200, phpWithDependencies] })
+  const apiPool = pools.pluginApi
+
+  apiPool.intercept({ path: '/plugins/info/1.0/existing-plugin', method: 'GET' }).reply(200, 'plugin data')
+  apiPool.intercept({ path: '/plugins/info/1.0/missing-plugin', method: 'GET' }).reply(404, 'Plugin not found')
+
+  const report = await analyze(SLUG)
+
+  assert.equal(report.meta.requires_plugins, 'existing-plugin, missing-plugin')
+  assert.equal(check(report, 'trunk', 'Required plugin "existing-plugin" exists').status, 'pass')
+  assert.equal(check(report, 'trunk', 'Required plugin "missing-plugin" exists').status, 'fail')
+})
+
+test('Requires Plugins is declared in both the trunk and stable tag blocks', async (t) => {
+  const phpWithDependencies = PHP_HEADER.replace(
+    'Requires PHP: 7.2',
+    'Requires PHP: 7.2\n * Requires Plugins: existing-plugin'
+  )
+  const pools = {}
+  const pool = withMockAgent(t, pools)
+  mockResponses(pool, {
+    'trunk/hello-dolly.php': [200, phpWithDependencies],
+    'tags/1.7.2/hello-dolly.php': [200, phpWithDependencies]
+  })
+  pools.pluginApi.intercept({ path: '/plugins/info/1.0/existing-plugin', method: 'GET' }).reply(200, 'plugin data')
+
+  const report = await analyze(SLUG)
+
+  assert.equal(check(report, 'trunk', 'Requires Plugins declared').detail, 'existing-plugin')
+  assert.equal(check(report, 'stable_tag', 'Requires Plugins declared').detail, 'existing-plugin')
 })
 
 test('a stable tag declared in readme but missing as a tag folder fails, skipping tag content checks', async (t) => {

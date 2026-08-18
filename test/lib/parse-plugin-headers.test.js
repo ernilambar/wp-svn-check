@@ -16,6 +16,19 @@ test('parsePluginHeaders extracts Version from a standard docblock', () => {
   })
 })
 
+test('parsePluginHeaders extracts comma-separated Requires Plugins slugs', () => {
+  const content = `<?php
+/**
+ * Plugin Name: Dependent Plugin
+ * Requires Plugins: plugin-slug1, plugin-slug2
+ */
+`
+
+  assert.deepEqual(parsePluginHeaders(content), {
+    'Requires Plugins': 'plugin-slug1, plugin-slug2'
+  })
+})
+
 test('parsePluginHeaders returns an empty object when Version is missing', () => {
   const content = `<?php
 /**
