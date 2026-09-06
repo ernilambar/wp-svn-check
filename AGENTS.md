@@ -1,9 +1,8 @@
-# wp-svn-check
+# AGENTS.md
 
-Node.js CLI that checks a WordPress.org plugin's SVN repo for common issues
-(missing readme, bad stable tag, missing main plugin file, missing assets).
-Fetches directly from `https://plugins.svn.wordpress.org/{slug}/` — no `svn`
-binary, no `api.wordpress.org` calls. ESM, Node >=22.
+## Overview
+
+Node.js CLI that checks a WordPress.org plugin's SVN repo for common issues (missing readme, bad stable tag, missing main plugin file, missing assets). ESM, Node >=22, zero `svn` binary or `api.wordpress.org` dependency.
 
 ## Architecture
 
@@ -22,6 +21,20 @@ src/render/markdown.js           # --format markdown output
 test/                            # node:test, mirrors src/ layout; HTTP mocked via undici MockAgent
 ```
 
+## Setup
+
+```sh
+npm install
+```
+
+## Commands
+
+```sh
+npm run lint:fix   # auto-fix standard violations
+npm run lint       # standard linter, zero errors required
+npm test           # node --test, HTTP mocked via undici MockAgent
+```
+
 ## Exit codes
 
 Tiered so CI can distinguish plugin problems from tool problems:
@@ -32,10 +45,11 @@ request got a real response (see `src/lib/analyzer.js`).
 
 ## Conventions
 
-- Lint/format: `standard` (zero-config).
-- Tests: `node --test`. No test hits the real SVN mirror.
-- Fetch layer never throws — transport failures are returned, not thrown,
-  so the analyzer can tell a dead network apart from a real 404.
+- **Fetch layer never throws** — transport failures are returned, not thrown, so the analyzer can distinguish a dead network from a real 404.
+- **Tiered exit codes** — `0` all pass · `1` has warn · `2` has fail · `3` not_found · `4` tool error. Preserve these; CI relies on them.
+- **No network in tests** — HTTP is always mocked with undici `MockAgent`. Never add a test that hits the real SVN mirror.
+- **Lint with `standard`** — zero-config, no ESLint/Prettier config files. Run `lint:fix` before `lint`.
+- **Mirror src layout in tests** — `test/` mirrors `src/` file-for-file.
 
 ## Quality gate
 
