@@ -43,7 +43,7 @@ Node.js 22 or later.
 
 ```sh
 npm install
-npm run lint:fix   # auto-fix `standard` violations
+npm run format     # auto-fix `neostandard` violations
 npm run lint       # must be zero errors
 npm test           # node --test, no network calls
 ```
@@ -62,4 +62,4 @@ node bin/cli.js this-slug-does-not-exist
 
 ## License
 
-MIT © 2026 [Nilambar Sharma](https://nilambar.net/)
+[MIT](LICENSE) © 2026 [Nilambar Sharma](https://nilambar.net/)

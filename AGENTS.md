@@ -30,8 +30,8 @@ npm install
 ## Commands
 
 ```sh
-npm run lint:fix   # auto-fix standard violations
-npm run lint       # standard linter, zero errors required
+npm run format     # auto-fix neostandard violations
+npm run lint       # neostandard linter, zero errors required
 npm test           # node --test, HTTP mocked via undici MockAgent
 ```
 
@@ -48,14 +48,14 @@ request got a real response (see `src/lib/analyzer.js`).
 - **Fetch layer never throws** — transport failures are returned, not thrown, so the analyzer can distinguish a dead network from a real 404.
 - **Tiered exit codes** — `0` all pass · `1` has warn · `2` has fail · `3` not_found · `4` tool error. Preserve these; CI relies on them.
 - **No network in tests** — HTTP is always mocked with undici `MockAgent`. Never add a test that hits the real SVN mirror.
-- **Lint with `standard`** — zero-config, no ESLint/Prettier config files. Run `lint:fix` before `lint`.
+- **Lint with `neostandard`** — flat config in `eslint.config.mjs`. Run `format` before `lint`.
 - **Mirror src layout in tests** — `test/` mirrors `src/` file-for-file.
 
 ## Quality gate
 
 All must pass before a task is complete:
 
-- `npm run lint:fix` — auto-fix `standard` violations (run before lint)
+- `npm run format` — auto-fix `neostandard` violations (run before lint)
 - `npm run lint` — zero errors; fix and re-run until clean
 - `npm test` — zero failures
 
